@@ -15,7 +15,7 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 8080;
 app.use(express.json({ limit: '50mb' })); // Or '10mb', '100mb', etc., adjust as needed
 
 app.use(cors());
