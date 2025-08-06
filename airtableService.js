@@ -2,12 +2,30 @@ const Airtable = require('airtable');
 const axios = require('axios');
 const { getSecret } = require('./secrets');
 
+let AIRTABLE_API_KEY;
+let BASE_ID;
+let base;
+let airtableApi;
 
-const AIRTABLE_API_KEY = await getSecret('AIRTABLE_API_KEY');
-const BASE_ID = await getSecret('AIRTABLE_BASE_ID');
-// Initialize Airtable
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(BASE_ID);
-
+async function initializeAirtableService() {
+    try {
+        AIRTABLE_API_KEY = await getSecret('AIRTABLE_API_KEY');
+        BASE_ID = await getSecret('AIRTABLE_BASE_ID');
+        
+        base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(BASE_ID);
+        airtableApi = axios.create({
+            baseURL: `https://api.airtable.com/v0/${BASE_ID}`,
+            headers: {
+                Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        console.log("Airtable service initialized successfully.");
+    } catch (error) {
+        console.error("Failed to initialize Airtable service:", error);
+        throw error;
+    }
+}
 
 
 const MAIN_TABLE_NAME = "tblpIHBsPfZXu8IFs";
@@ -24,13 +42,7 @@ const TASK_FORMS_FIELDS_TABLE_NAME = 'tbl91WJ2yjJX6ndAs'
 const TASK_FORMS_SUBMISSIONS_TABLE_NAME = 'tbllxpBCIdShL5Mih'
 const TASK_CHAT_TABLE_NAME = 'tblmByy6LcRAYyf0y'
 // Re-usable axios instance for Airtable API
-const airtableApi = axios.create({
-    baseURL: `https://api.airtable.com/v0/${BASE_ID}`,
-    headers: {
-        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
-        'Content-Type': 'application/json'
-    }
-});
+
 
 
 const getTableName = (name) => {
@@ -286,4 +298,5 @@ module.exports = {
     getRecordsByIds,
     getNextAttachmentId,
     getTaskRecordIdByDisplayId,
+    initializeAirtableService
 }; 
