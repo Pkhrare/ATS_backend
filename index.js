@@ -1,21 +1,21 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+// require('dotenv').config();
 const airtableService = require('./airtableService');
 const { Storage } = require('@google-cloud/storage');
 const multer = require('multer');
 const http = require('http');
 const { Server } = require("socket.io");
-
+const { getSecret } = require('./secrets');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:5173", // Make sure this matches your frontend URL
+        origin: await getSecret('FRONTEND_URL') || "http://localhost:5173", // Make sure this matches your frontend URL
         methods: ["GET", "POST"]
     }
 });
-const port = process.env.PORT || 8080;
+const port = await getSecret('PORT');
 app.use(express.json({ limit: '50mb' })); // Or '10mb', '100mb', etc., adjust as needed
 
 app.use(cors());
@@ -23,7 +23,7 @@ app.use(express.json());
 
 // ----- GCS and Multer Setup -----
 const storage = new Storage();
-const bucketName = process.env.GCS_BUCKET_NAME;
+const bucketName = await getSecret('GCS_BUCKET_NAME');
 const bucket = storage.bucket(bucketName);
 
 const multerStorage = multer.memoryStorage();

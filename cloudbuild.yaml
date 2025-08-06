@@ -1,0 +1,23 @@
+steps:
+# Build the Docker image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'us-central1-docker.pkg.dev/[PROJECT_ID]/my-repository/production-backend:latest', '.']
+
+# Push the Docker image to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'us-central1-docker.pkg.dev/[PROJECT_ID]/my-repository/production-backend:latest']
+
+# Deploy the new image to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'deploy'
+  - 'production-backend-service'
+  - '--image'
+  - 'us-central1-docker.pkg.dev/[PROJECT_ID]/my-repository/production-backend:latest'
+  - '--region'
+  - 'us-central1'
+  - '--allow-unauthenticated'
+  - '--platform'
+  - 'managed'

@@ -1,23 +1,28 @@
 const Airtable = require('airtable');
 const axios = require('axios');
+const { getSecret } = require('./secrets');
 
+
+const AIRTABLE_API_KEY = await getSecret('AIRTABLE_API_KEY');
+const BASE_ID = await getSecret('AIRTABLE_BASE_ID');
 // Initialize Airtable
-const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
-const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
-const BASE_ID = process.env.AIRTABLE_BASE_ID;
-const MAIN_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME;
-const COUNTER_TABLE_NAME = process.env.AIRTABLE_TABLE_COUNTER;
-const COUNTER_RECORD_ID = process.env.AIRTABLE_TABLE_COUNTER_ID;
-const ACTIONS_TABLE_NAME = process.env.AIRTABLE_ACTIONS_TABLE_ID;
-const ACTIVITIES_TABLE_NAME = process.env.AIRTABLE_ACTIVITES_TABLE_ID;
-const TASKS_TABLE_NAME = process.env.AIRTABLE_TABLE_TASKS_ID;
-const COLLABORATORS_TABLE_NAME = process.env.AIRTABLE_TABLE_COLLABORATORS_ID;
-const TASK_ATTACHMENTS_TABLE_NAME = process.env.AIRTABLE_TABLE_TASK_ATTACHMENTS_ID;
-const TASK_CHECKLIST_TABLE_NAME = process.env.AIRTABLE_TABLE_TASK_CHECKLISTS_ID;
-const TASK_FORMS_TABLE_NAME = process.env.AIRTABLE_TABLE_TASK_FORMS_ID;
-const TASK_FORMS_FIELDS_TABLE_NAME = process.env.AIRTABLE_TABLE_TASK_FORMS_FIELDS_ID
-const TASK_FORMS_SUBMISSIONS_TABLE_NAME = process.env.AIRTABLE_TABLE_TASK_FORMS_SUBMISSIONS_ID
-const TASK_CHAT_TABLE_NAME = process.env.AIRTABLE_TABLE_TASK_CHAT_ID
+const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(BASE_ID);
+
+
+
+const MAIN_TABLE_NAME = "tblpIHBsPfZXu8IFs";
+const COUNTER_TABLE_NAME = 'tblS3ijjC5fBGTuPR';
+const COUNTER_RECORD_ID = 'recVvoLbScv02b54S';
+const ACTIONS_TABLE_NAME = 'tblKQ8MMZMirJduk7';
+const ACTIVITIES_TABLE_NAME = 'tblNQFudN16AwUKBM';
+const TASKS_TABLE_NAME = 'tbl9D8m3mF2RVptEc';
+const COLLABORATORS_TABLE_NAME = 'tblev0ek2lTzgxIMQ';
+const TASK_ATTACHMENTS_TABLE_NAME = 'tblwPb1smWrdFtTfE';
+const TASK_CHECKLIST_TABLE_NAME = 'tblbOAaUlFZvPzTTJ';
+const TASK_FORMS_TABLE_NAME = 'tblLxZdNHFCq8ETVL';
+const TASK_FORMS_FIELDS_TABLE_NAME = 'tbl91WJ2yjJX6ndAs'
+const TASK_FORMS_SUBMISSIONS_TABLE_NAME = 'tbllxpBCIdShL5Mih'
+const TASK_CHAT_TABLE_NAME = 'tblmByy6LcRAYyf0y'
 // Re-usable axios instance for Airtable API
 const airtableApi = axios.create({
     baseURL: `https://api.airtable.com/v0/${BASE_ID}`,
