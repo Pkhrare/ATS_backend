@@ -237,7 +237,7 @@ You can monitor the build progress in the [Cloud Build history](https://console.
 
 ## 🤝 Contributing
 
-(Optional: Add guidelines for how others can contribute to your project.)
+TBD
 
 ---
 
