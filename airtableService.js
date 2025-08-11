@@ -132,6 +132,9 @@ const getFilteredRecords = async (recordId, tableName) => {
         case 'task_chat':
             formula = `{id (from task_id)} = "${recordId}"`; // task_id
             break;
+        case "main_table":
+            formula = `{Project ID} = "${recordId}"` // project id of record
+            break;
         default:
              // Default logic for tables like 'activities' linked to a project.
             formula = `{Project ID (from Project ID)} = "${recordId}"`;
