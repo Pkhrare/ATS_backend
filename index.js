@@ -16,6 +16,12 @@ let bucket;
 let frontendUrl;
 let airtableApi; // Placeholder for the initialized Airtable API
 
+const allowedOrigins = [
+    'http://localhost:5173',          // local dev
+    'https://waiverprojects.web.app' // deployed frontend
+  ];
+
+
 async function initializeApp() {
     try {
         // Fetch all secrets and initialize services before starting the server
@@ -28,8 +34,9 @@ async function initializeApp() {
         // Initialize Socket.IO
         io = new Server(server, {
             cors: {
-                origin: frontendUrl || "http://localhost:5173",
-                methods: ["GET", "POST"]
+                origin: allowedOrigins,
+                methods: ["GET", "POST"],
+                credentials: true
             }
         });
 
@@ -39,10 +46,20 @@ async function initializeApp() {
 
         // All API routes and Socket.IO logic go here
         // The server will only be started after this section is fully defined.
-        
+        // CORS
         // Use the initialized `airtableApi` instance in your routes
         app.use(express.json({ limit: '50mb' }));
-        app.use(cors());
+
+        app.use(cors({
+            origin: function(origin, callback){
+              if(!origin) return callback(null, true); // allow non-browser requests
+              if(allowedOrigins.indexOf(origin) === -1){
+                return callback(new Error('CORS not allowed for this origin'), false);
+              }
+              return callback(null, true);
+            },
+            credentials: true
+          }));
         app.use(express.json());
 
         const multerStorage = multer.memoryStorage();
