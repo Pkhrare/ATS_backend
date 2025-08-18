@@ -332,10 +332,10 @@ async function initializeApp() {
         });
 
         // GET authenticate client
-        app.get('/api/authenticate/:projectName/:projectID', async (req, res) => {
+        app.get('/api/authenticate/:projectName/:projectId', async (req, res) => {
             try {
-                const { projectName, projectID } = req.params;
-                const authenticatedClient = await airtableService.authenticateClient(projectName, projectID);
+                const { projectName, projectId } = req.params;
+                const authenticatedClient = await airtableService.authenticateClient(projectName, projectId);
                 res.json(authenticatedClient);
             } catch (error) {
                 res.status(500).json({ error: 'Failed to authenticate client' });
