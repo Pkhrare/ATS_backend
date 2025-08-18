@@ -54,18 +54,19 @@ async function initializeApp() {
         app.use(express.json({ limit: '50mb' }));
 
         const corsOptions = {
-            origin: allowedOrigins,
+            origin: (origin, callback) => {
+                if (allowedOrigins.includes(origin) || !origin) {
+                    callback(null, true);
+                } else {
+                    callback(new Error('Not allowed by CORS'));
+                }
+            },
             methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             allowedHeaders: ["Content-Type", "Authorization"],
             credentials: true,
           };
           
         app.use(cors(corsOptions));
-          
-          // Make sure preflight is handled globally
-        app.options("*", cors(corsOptions));
-
-        app.use(express.json());
 
         const multerStorage = multer.memoryStorage();
         const upload = multer({ storage: multerStorage });
