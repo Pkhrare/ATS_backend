@@ -13,7 +13,7 @@ steps:
   args:
   - 'run'
   - 'deploy'
-  - 'production-backend-service'
+  - 'ats-backend'
   - '--image'
   - 'us-central1-docker.pkg.dev/[PROJECT_ID]/my-repository/production-backend:latest'
   - '--region'
@@ -21,3 +21,5 @@ steps:
   - '--allow-unauthenticated'
   - '--platform'
   - 'managed'
+  - '--set-env-vars'
+  - 'PORT=8080'
