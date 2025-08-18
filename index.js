@@ -389,7 +389,7 @@ async function initializeApp() {
         // ----- END API ROUTES -----
 
         // Start the server only after everything is initialized
-        const port = process.env.PORT || 3000;
+        const port = process.env.PORT || 8080;
         server.listen(port, () => {
             console.log(`Server is running on port: ${port}`);
         });
