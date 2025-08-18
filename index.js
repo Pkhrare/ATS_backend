@@ -5,7 +5,7 @@ const { Storage } = require('@google-cloud/storage');
 const multer = require('multer');
 const http = require('http');
 const { Server } = require("socket.io");
-const { getSecret } = require('./secrets');
+const { getSecret, initializeSecrets } = require('./secrets');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,7 +14,6 @@ const server = http.createServer(app);
 let io;
 let bucket;
 let frontendUrl;
-let airtableApi; // Placeholder for the initialized Airtable API
 
 const allowedOrigins = [
     'http://localhost:5173',          // local dev
@@ -25,11 +24,15 @@ const allowedOrigins = [
 async function initializeApp() {
     try {
         // Fetch all secrets and initialize services before starting the server
+        await initializeSecrets();
+
         frontendUrl = await getSecret('FRONTEND_URL');
         const bucketName = await getSecret('GCS_BUCKET_NAME');
+        const airtableApiKey = await getSecret('AIRTABLE_API_KEY');
+        const airtableBaseId = await getSecret('AIRTABLE_BASE_ID');
 
         // Initialize Airtable service and get the axios instance
-        airtableApi = await airtableService.initializeAirtableService();
+        airtableService.initializeAirtableService(airtableApiKey, airtableBaseId);
 
         // Initialize Socket.IO
         io = new Server(server, {

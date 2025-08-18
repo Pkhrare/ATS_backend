@@ -7,10 +7,10 @@ let BASE_ID;
 let base;
 let airtableApi;
 
-async function initializeAirtableService() {
+function initializeAirtableService(apiKey, baseId) {
     try {
-        AIRTABLE_API_KEY = await getSecret('AIRTABLE_API_KEY');
-        BASE_ID = await getSecret('AIRTABLE_BASE_ID');
+        AIRTABLE_API_KEY = apiKey;
+        BASE_ID = baseId;
         
         base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(BASE_ID);
         airtableApi = axios.create({
@@ -301,5 +301,6 @@ module.exports = {
     getRecordsByIds,
     getNextAttachmentId,
     getTaskRecordIdByDisplayId,
-    initializeAirtableService
+    initializeAirtableService,
+    airtableApi
 }; 
