@@ -50,16 +50,18 @@ async function initializeApp() {
         // Use the initialized `airtableApi` instance in your routes
         app.use(express.json({ limit: '50mb' }));
 
-        app.use(cors({
-            origin: function(origin, callback){
-              if(!origin) return callback(null, true); // allow non-browser requests
-              if(allowedOrigins.indexOf(origin) === -1){
-                return callback(new Error('CORS not allowed for this origin'), false);
-              }
-              return callback(null, true);
-            },
-            credentials: true
-          }));
+        const corsOptions = {
+            origin: allowedOrigins,
+            methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            allowedHeaders: ["Content-Type", "Authorization"],
+            credentials: true,
+          };
+          
+        app.use(cors(corsOptions));
+          
+          // Make sure preflight is handled globally
+        app.options("*", cors(corsOptions));
+
         app.use(express.json());
 
         const multerStorage = multer.memoryStorage();
@@ -77,8 +79,7 @@ async function initializeApp() {
             }
         });
 
-        // CORS preflight for uploads
-        app.options('/api/upload/:tableName/:recordId/:fieldName', cors());
+       
 
         // File upload route
         app.post('/api/upload/:tableName/:recordId/:fieldName', upload.single('file'), async (req, res) => {
