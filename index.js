@@ -77,6 +77,9 @@ async function initializeApp() {
             }
         });
 
+        // CORS preflight for uploads
+        app.options('/api/upload/:tableName/:recordId/:fieldName', cors());
+
         // File upload route
         app.post('/api/upload/:tableName/:recordId/:fieldName', upload.single('file'), async (req, res) => {
             try {
