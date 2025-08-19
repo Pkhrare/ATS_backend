@@ -199,14 +199,52 @@ const createRecords = async (recordsToCreate, tableName) => {
 // Update multiple records
 const updateMultipleRecords = async (recordsToUpdate, tableName) => {
     const table = getTableName(tableName);
+    
     try {
-        const response = await airtableApi.patch(`/${table}`, { records: recordsToUpdate });
-        return response.data;
+        const allUpdatedRecords = [];
+        for (let i = 0; i < recordsToUpdate.length; i += 10) {
+            const chunk = recordsToUpdate.slice(i, i + 10);
+            const updatedChunk = await base(table).update(chunk);
+            allUpdatedRecords.push(...updatedChunk); 
+        }
+        return { records: allUpdatedRecords };
+    
     } catch (error) {
         console.error('Airtable Service Error (updateMultipleRecords):', error.response?.data || error.message);
         throw error;
     }
 };
+
+// const updateMultipleRecords = async (recordsToUpdate, tableName) => {
+//     try {
+//         const allUpdatedRecords = [];
+
+//         // Airtable's API has a hard limit of 10 records per update request.
+//         // This loop breaks the incoming array from the frontend into "chunks" of 10.
+//         for (let i = 0; i < recordsToUpdate.length; i += 10) {
+//             // Get the next chunk of up to 10 records.
+//             const chunk = recordsToUpdate.slice(i, i + 10);
+            
+//             // The 'base' variable should be your initialized Airtable base object.
+//             // Send the update request for just this single chunk.
+//             const updatedChunk = await base(tableName).update(chunk);
+            
+//             // Add the successfully updated records from this chunk to our results array.
+//             allUpdatedRecords.push(...updatedChunk);
+//         }
+
+//         // Return all the updated records, matching the original expected format.
+//         return { records: allUpdatedRecords };
+
+//     } catch (error) {
+//         // Log the detailed error on the server for debugging purposes.
+//         console.error('Error in airtableService.updateMultipleRecords:', error);
+        
+//         // Throw an error that will be caught by your Express route handler,
+//         // which will then send the 500 response.
+//         throw new Error('Failed to update records');
+//     }
+// };
 
 // Delete multiple records
 const deleteMultipleRecords = async (recordIds, tableName) => {
