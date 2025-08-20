@@ -301,10 +301,10 @@ async function initializeApp() {
                 const { projectId } = req.params;
                 console.log(projectId);
                 const response =  await airtableService.getFilteredRecords(projectId, 'tasks');
-                console.log(response);
-                const transformedData = airtableService.transformData(response);
-                console.log(transformedData);
-                res.json(transformedData);
+                // console.log(response);
+                // const transformedData = airtableService.transformData(response);
+                // console.log(transformedData);
+                res.json(response);
             } catch (error) {
                 res.status(500).json({ error: 'Failed to fetch board' });
             }
