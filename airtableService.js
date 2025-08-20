@@ -102,8 +102,6 @@ const getRecord = async (tableName, recordId) => {
 const getFilteredRecords = async (recordId, tableName) => {
     const table = getTableName(tableName);
     let formula;
-    console.log("tableName", tableName);
-    console.log("table", table);
     switch (tableName) {
         case 'actions':
             formula = `{Project ID} = "${recordId}"`;

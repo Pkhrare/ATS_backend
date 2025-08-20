@@ -299,12 +299,9 @@ async function initializeApp() {
         app.get('/api/records/board/:projectId/:tableName', async (req, res) => {
             try{
                 const { projectId, tableName } = req.params;
-                console.log(projectId);
                 const response =  await airtableService.getFilteredRecords(projectId, tableName);
-                // console.log(response);
-                // const transformedData = airtableService.transformData(response);
-                // console.log(transformedData);
-                res.json(response);
+                const transformedData = airtableService.transformData(response);
+                res.json(transformedData);
             } catch (error) {
                 res.status(500).json({ error: 'Failed to fetch board' });
             }
