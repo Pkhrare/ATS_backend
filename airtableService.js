@@ -119,7 +119,7 @@ const getFilteredRecords = async (recordId, tableName) => {
             }
             break;
         case 'task_groups':
-            formula = `{Project ID (from Project ID)} = "${recordId}"`;
+            formula = `{Project ID (from projectID)} = "${recordId}"`;
             break;
         case 'task_attachments':
             // Filters attachments by the record ID of the parent task.
