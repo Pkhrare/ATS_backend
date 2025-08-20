@@ -296,11 +296,11 @@ async function initializeApp() {
         });
 
         // GET task board for a project
-        app.get('/api/records/board/:projectId', async (req, res) => {
+        app.get('/api/records/board/:projectId/:tableName', async (req, res) => {
             try{
-                const { projectId } = req.params;
+                const { projectId, tableName } = req.params;
                 console.log(projectId);
-                const response =  await airtableService.getFilteredRecords(projectId, 'tasks');
+                const response =  await airtableService.getFilteredRecords(projectId, tableName);
                 // console.log(response);
                 // const transformedData = airtableService.transformData(response);
                 // console.log(transformedData);
