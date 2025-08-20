@@ -11,7 +11,7 @@ function initializeAirtableService(apiKey, baseId) {
     try {
         AIRTABLE_API_KEY = apiKey;
         BASE_ID = baseId;
-        
+
         base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(BASE_ID);
         airtableApi = axios.create({
             baseURL: `https://api.airtable.com/v0/${BASE_ID}`,
@@ -136,7 +136,7 @@ const getFilteredRecords = async (recordId, tableName) => {
             formula = `{Project ID} = "${recordId}"` // project id of record
             break;
         default:
-             // Default logic for tables like 'activities' linked to a project.
+            // Default logic for tables like 'activities' linked to a project.
             formula = `{Project ID (from Project ID)} = "${recordId}"`;
             break;
     }
@@ -199,16 +199,16 @@ const createRecords = async (recordsToCreate, tableName) => {
 // Update multiple records
 const updateMultipleRecords = async (recordsToUpdate, tableName) => {
     const table = getTableName(tableName);
-    
+
     try {
         const allUpdatedRecords = [];
         for (let i = 0; i < recordsToUpdate.length; i += 10) {
             const chunk = recordsToUpdate.slice(i, i + 10);
             const updatedChunk = await base(table).update(chunk);
-            allUpdatedRecords.push(...updatedChunk); 
+            allUpdatedRecords.push(...updatedChunk);
         }
         return { records: allUpdatedRecords };
-    
+
     } catch (error) {
         console.error('Airtable Service Error (updateMultipleRecords):', error.response?.data || error.message);
         throw error;
@@ -224,11 +224,11 @@ const updateMultipleRecords = async (recordsToUpdate, tableName) => {
 //         for (let i = 0; i < recordsToUpdate.length; i += 10) {
 //             // Get the next chunk of up to 10 records.
 //             const chunk = recordsToUpdate.slice(i, i + 10);
-            
+
 //             // The 'base' variable should be your initialized Airtable base object.
 //             // Send the update request for just this single chunk.
 //             const updatedChunk = await base(tableName).update(chunk);
-            
+
 //             // Add the successfully updated records from this chunk to our results array.
 //             allUpdatedRecords.push(...updatedChunk);
 //         }
@@ -239,7 +239,7 @@ const updateMultipleRecords = async (recordsToUpdate, tableName) => {
 //     } catch (error) {
 //         // Log the detailed error on the server for debugging purposes.
 //         console.error('Error in airtableService.updateMultipleRecords:', error);
-        
+
 //         // Throw an error that will be caught by your Express route handler,
 //         // which will then send the 500 response.
 //         throw new Error('Failed to update records');
@@ -284,7 +284,7 @@ const getAllRecordsFromTable = async (tableName) => {
 
 const authenticateClient = async (projectName, projectId) => {
     const table = getTableName('mainTable');
-    const formula = `AND(%7BProject+Name%7D+%3D+%22${projectName}%22%2C+%7BProject+ID%7D+%3D+%22${projectId}%22)`; 
+    const formula = `AND(%7BProject+Name%7D+%3D+%22${projectName}%22%2C+%7BProject+ID%7D+%3D+%22${projectId}%22)`;
     try {
         const url = `/${table}?filterByFormula=${formula}`;
         const response = await airtableApi.get(url);
@@ -324,6 +324,58 @@ const getNextAttachmentId = async () => {
     }
 };
 
+function transformData(apiResponse) {
+    const groupsMap = new Map(); // key = task_groups id, value = { group_name, group_order, tasks }
+    const ungrouped = [];
+
+    for (const record of apiResponse.records) {
+        const task = { ...record.fields }; // copy task fields
+        // remove grouping fields from the individual task
+        delete task.task_groups;
+        delete task.group_name;
+        delete task.group_order;
+
+        if (record.fields.task_groups && record.fields.task_groups.length > 0) {
+            const groupId = record.fields.task_groups[0];
+            const groupName = record.fields.group_name?.[0] || "Unnamed Group";
+            const groupOrder = record.fields.group_order?.[0] ?? 0;
+
+            if (!groupsMap.has(groupId)) {
+                groupsMap.set(groupId, {
+                    task_groups: groupId,
+                    group_name: groupName,
+                    group_order: groupOrder,
+                    tasks: [],
+                });
+            }
+            groupsMap.get(groupId).tasks.push(task);
+        } else {
+            ungrouped.push(task);
+        }
+    }
+
+    // Reset order inside each group
+    for (const group of groupsMap.values()) {
+        group.tasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        group.tasks.forEach((t, idx) => {
+            t.order = idx; // reset order
+        });
+    }
+
+    // Reset order for ungrouped
+    ungrouped.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    ungrouped.forEach((t, idx) => {
+        t.order = idx;
+    });
+
+    // Convert groupsMap to array, sorted by group_order
+    const groups = Array.from(groupsMap.values()).sort(
+        (a, b) => a.group_order - b.group_order
+    );
+
+    return { groups, ungrouped };
+}
+
 
 
 module.exports = {
@@ -340,5 +392,6 @@ module.exports = {
     getNextAttachmentId,
     getTaskRecordIdByDisplayId,
     initializeAirtableService,
-    airtableApi
+    airtableApi,
+    transformData
 }; 

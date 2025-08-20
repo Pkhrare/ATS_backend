@@ -295,6 +295,19 @@ async function initializeApp() {
             }
         });
 
+        // GET task board for a project
+        app.get('/api/records/:projectId/board', async (req, res) => {
+            try{
+                const { projectId } = req.params;
+                const response =  await airtableService.getFilteredRecords(projectId, 'tasks');
+                const transformedData = airtableService.transformData(response);
+                res.json(transformedData);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to fetch board' });
+            }
+        });
+            
+
         // GET records by IDs
         app.post('/api/records/by-ids', async (req, res) => {
             try {
