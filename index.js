@@ -296,9 +296,10 @@ async function initializeApp() {
         });
 
         // GET task board for a project
-        app.get('/api/records/:projectId/board', async (req, res) => {
+        app.get('/api/records/board/:projectId', async (req, res) => {
             try{
                 const { projectId } = req.params;
+                console.log(projectId);
                 const response =  await airtableService.getFilteredRecords(projectId, 'tasks');
                 console.log(response);
                 const transformedData = airtableService.transformData(response);
