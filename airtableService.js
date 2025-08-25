@@ -193,8 +193,21 @@ const createRecords = async (recordsToCreate, tableName) => {
     });
 
     try {
-        const response = await airtableApi.post(`/${table}`, { records: processedRecords });
-        return response.data;
+        const allCreatedRecords = [];
+        // Add the batching loop here
+        for (let i = 0; i < processedRecords.length; i += 10) {
+            const chunk = processedRecords.slice(i, i + 10);
+            
+            // Send only the small chunk to the API
+            const response = await airtableApi.post(`/${table}`, { records: chunk });
+            
+            // Add the newly created records from the chunk to our final array
+            allCreatedRecords.push(...response.data.records);
+        }
+        
+        // Return all the records that were created across all batches
+        return { records: allCreatedRecords };
+
     } catch (error) {
         console.error('Airtable Service Error (createRecords):', error.response?.data || error.message);
         throw error;
