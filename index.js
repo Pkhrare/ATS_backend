@@ -356,6 +356,59 @@ async function initializeApp() {
             }
         });
 
+        app.get('/api/info-pages', async (req, res) => {
+            try {
+                const infoPages = await airtableService.getAllRecordsFromTable('informational_pages');
+                res.json(infoPages);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to fetch info pages' });
+            }
+        });
+
+        app.get('/api/info-pages/:pageId', async (req, res) => {
+            try {
+                const { pageId } = req.params;
+                const infoPage = await airtableService.getRecord('informational_pages', pageId);
+                res.json(infoPage);
+            }
+            catch (error) {
+                res.status(500).json({ error: 'Failed to fetch info page' });
+            }
+        });
+
+        app.post('/api/info-pages', async (req, res) => {
+            try {
+                const { recordsToCreate } = req.body;
+                const createdRecords = await airtableService.createRecords(recordsToCreate, 'informational_pages');
+                res.json(createdRecords);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to create info page' });
+            }
+        });
+
+        app.patch('/api/info-pages/:pageId', async (req, res) => {
+            try {
+                const { pageId } = req.params;
+                const { fields } = req.body;
+                const updatedRecord = await airtableService.updateRecord(pageId, fields, 'informational_pages');
+                res.json(updatedRecord);
+            }
+            catch (error) {
+                res.status(500).json({ error: 'Failed to update info page' });
+            }
+        });
+
+        app.delete('/api/info-pages/:pageId', async (req, res) => {
+            try {
+                const { pageId } = req.params;
+                const deletedRecord = await airtableService.deleteRecord(pageId, 'informational_pages');
+                res.json(deletedRecord);
+            }
+            catch (error) {
+                res.status(500).json({ error: 'Failed to delete info page' });
+            }
+        });
+
 
         // ----- Socket.IO Connection -----
         io.on('connection', (socket) => {

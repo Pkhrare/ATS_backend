@@ -42,6 +42,7 @@ const TASK_FORMS_FIELDS_TABLE_NAME = 'tbl91WJ2yjJX6ndAs'
 const TASK_FORMS_SUBMISSIONS_TABLE_NAME = 'tbllxpBCIdShL5Mih'
 const TASK_CHAT_TABLE_NAME = 'tblmByy6LcRAYyf0y'
 const TASK_GROUPS_TABLE_NAME = 'tblCD3xEADjeAG3d4' 
+const INFORMATIONAL_TABLE_NAME = 'tblM7936jKJeBdw36'
 // Re-usable axios instance for Airtable API
 
 
@@ -72,6 +73,8 @@ const getTableName = (name) => {
             return TASK_FORMS_SUBMISSIONS_TABLE_NAME;
         case 'task_groups':
             return TASK_GROUPS_TABLE_NAME;
+        case 'informational_pages':
+            return INFORMATIONAL_TABLE_NAME;
         default:
             return MAIN_TABLE_NAME;
     }
