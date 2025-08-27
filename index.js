@@ -356,32 +356,24 @@ async function initializeApp() {
             }
         });
 
-        // GET all info pages
+        // GET all info pages -> This is perfect. No changes needed.
         app.get('/api/info-pages', async (req, res) => {
             try {
                 const infoPages = await airtableService.getAllRecordsFromTable('informational_pages');
-
-                // Transform the raw Airtable data into the desired format
-                const formattedPages = infoPages.map(record => {
-                    return {
-                        id: record.id,
-                        title: record.fields.pageTitle,
-                        order: record.fields.order,
-                    };
-                });
-
-                // It's also a good practice to ensure the list is sorted correctly
+                const formattedPages = infoPages.map(record => ({
+                    id: record.id,
+                    title: record.fields.pageTitle,
+                    order: record.fields.order,
+                }));
                 formattedPages.sort((a, b) => a.order - b.order);
-
                 res.json(formattedPages);
             } catch (error) {
-                // It's helpful to log the actual error on the server for debugging
                 console.error('Failed to fetch info pages:', error);
                 res.status(500).json({ error: 'Failed to fetch info pages' });
             }
         });
 
-        // GET a single info page
+        // GET a single info page -> This is also perfect. No changes needed.
         app.get('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
@@ -390,70 +382,85 @@ async function initializeApp() {
                     id: infoPage.id,
                     title: infoPage.fields.pageTitle,
                     order: infoPage.fields.order,
-                    attachment: infoPage.fields.pageAttachments,
+                    attachment: infoPage.fields.pageAttachments, // Make sure this Airtable field name is correct
                     content: infoPage.fields.pageContent,
                 };
                 res.json(formattedPage);
-            }
-            catch (error) {
+            } catch (error) {
+                console.error(`Failed to fetch info page ${req.params.pageId}:`, error);
                 res.status(500).json({ error: 'Failed to fetch info page' });
             }
         });
 
-        // POST (create) a new info page
+        // POST (create) a new info page -> MODIFIED
         app.post('/api/info-pages', async (req, res) => {
             try {
-                const { recordsToCreate } = req.body;
-                const formattedRecords = recordsToCreate.map(record => {
-                    return {
-                        fields: {
-                            pageTitle: record.title,
-                            order: record.order,
-                            pageAttachments: record.attachment,
-                            pageContent: record.content,
-                        }
-                    };
-                });
-                const createdRecords = await airtableService.createRecords(formattedRecords, 'informational_pages');
-                res.json(createdRecords);
+                const { title } = req.body; // Expect a simple { title: "..." } object
+
+                if (!title) {
+                    return res.status(400).json({ error: 'Title is required' });
+                }
+
+                // Find the highest current order to place the new page at the end
+                const allPages = await airtableService.getAllRecordsFromTable('informational_pages');
+                const maxOrder = allPages.reduce((max, p) => Math.max(max, p.fields.order || 0), 0);
+
+                const recordToCreate = {
+                    fields: {
+                        pageTitle: title,
+                        pageContent: '', // Start with empty content
+                        order: maxOrder + 1,
+                    }
+                };
+
+                const createdRecord = await airtableService.createRecord(recordToCreate, 'informational_pages');
+                res.status(201).json(createdRecord); // Use 201 for resource creation
+
             } catch (error) {
+                console.error('Failed to create info page:', error);
                 res.status(500).json({ error: 'Failed to create info page' });
             }
         });
 
-        // PATCH (update) an info page
+        // PATCH (update) an info page -> MODIFIED
         app.patch('/api/info-pages/:pageId', async (req, res) => {
-            try {                
-                const { fields } = req.body;
-                const { id, fieldsToUpdate } = fields;
-                const formattedFields = {
-                    fields: {
-                        pageTitle: fieldsToUpdate.title,
-                        order: fieldsToUpdate.order,
-                        pageAttachments: fieldsToUpdate.attachment,
-                        pageContent: fieldsToUpdate.content,
-                    }
-                };
-                const updatedRecord = await airtableService.updateRecord(id, formattedFields, 'informational_pages');
+            try {
+                const { pageId } = req.params;
+                const { title, content } = req.body; // Expect a flat object { title, content }
+
+                // Build the fields object dynamically to only update what's provided
+                const fieldsToUpdate = {};
+                if (title !== undefined) {
+                    fieldsToUpdate.pageTitle = title;
+                }
+                if (content !== undefined) {
+                    fieldsToUpdate.pageContent = content;
+                }
+
+                if (Object.keys(fieldsToUpdate).length === 0) {
+                    return res.status(400).json({ error: 'No fields to update were provided.' });
+                }
+
+                const updatedRecord = await airtableService.updateRecord(pageId, { fields: fieldsToUpdate }, 'informational_pages');
                 res.json(updatedRecord);
-            }
-            catch (error) {
+
+            } catch (error) {
+                console.error(`Failed to update info page ${req.params.pageId}:`, error);
                 res.status(500).json({ error: 'Failed to update info page' });
             }
         });
 
-        // DELETE an info page
+        // DELETE an info page -> This is fine. No changes needed.
         app.delete('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
                 const deletedRecord = await airtableService.deleteRecord(pageId, 'informational_pages');
                 res.json(deletedRecord);
-            }
-            catch (error) {
+            } catch (error) {
+                console.error(`Failed to delete info page ${req.params.pageId}:`, error);
                 res.status(500).json({ error: 'Failed to delete info page' });
             }
         });
-
 
         // ----- Socket.IO Connection -----
         io.on('connection', (socket) => {
