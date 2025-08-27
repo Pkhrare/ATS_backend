@@ -430,7 +430,7 @@ async function initializeApp() {
             try {
                 console.log('Request Body:', req.body); // <-- LOG 1: What did the frontend send?
 
-                const { title, content } = req.body;
+                const { title, content, attachment } = req.body;
 
                 const fieldsToUpdate = {};
                 if (title !== undefined) {
@@ -438,6 +438,9 @@ async function initializeApp() {
                 }
                 if (content !== undefined) {
                     fieldsToUpdate.pageContent = content;
+                }
+                if (attachment !== undefined) {
+                    fieldsToUpdate.pageAttachments = attachment;
                 }
 
                 console.log('Fields to Update:', fieldsToUpdate); // <-- LOG 2: What are we preparing to send?
