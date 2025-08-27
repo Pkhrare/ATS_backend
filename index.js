@@ -18,7 +18,7 @@ let frontendUrl;
 const allowedOrigins = [
     'http://localhost:5173',          // local dev
     'https://waiverprojects.web.app' // deployed frontend
-  ];
+];
 
 
 async function initializeApp() {
@@ -64,8 +64,8 @@ async function initializeApp() {
             methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
             allowedHeaders: ["Content-Type", "Authorization"],
             credentials: true,
-          };
-          
+        };
+
         app.use(cors(corsOptions));
 
         const multerStorage = multer.memoryStorage();
@@ -83,7 +83,7 @@ async function initializeApp() {
             }
         });
 
-       
+
 
         // File upload route
         app.post('/api/upload/:tableName/:recordId/:fieldName', upload.single('file'), async (req, res) => {
@@ -297,16 +297,16 @@ async function initializeApp() {
 
         // GET task board for a project
         app.get('/api/records/board/:projectId/:tableName', async (req, res) => {
-            try{
+            try {
                 const { projectId, tableName } = req.params;
-                const response =  await airtableService.getFilteredRecords(projectId, tableName);
+                const response = await airtableService.getFilteredRecords(projectId, tableName);
                 const transformedData = airtableService.transformData(response);
                 res.json(transformedData);
             } catch (error) {
                 res.status(500).json({ error: 'Failed to fetch board' });
             }
         });
-            
+
 
         // GET records by IDs
         app.post('/api/records/by-ids', async (req, res) => {
@@ -359,8 +359,24 @@ async function initializeApp() {
         app.get('/api/info-pages', async (req, res) => {
             try {
                 const infoPages = await airtableService.getAllRecordsFromTable('informational_pages');
-                res.json(infoPages);
+
+                // Transform the raw Airtable data into the desired format
+                const formattedPages = infoPages.map(record => {
+                    return {
+                        id: record.id,
+                        title: record.fields.pageTitle,
+                        order: record.fields.order,
+                        attachment: record.fields.pageAttachments,
+                    };
+                });
+
+                // It's also a good practice to ensure the list is sorted correctly
+                formattedPages.sort((a, b) => a.order - b.order);
+
+                res.json(formattedPages);
             } catch (error) {
+                // It's helpful to log the actual error on the server for debugging
+                console.error('Failed to fetch info pages:', error);
                 res.status(500).json({ error: 'Failed to fetch info pages' });
             }
         });
@@ -369,7 +385,13 @@ async function initializeApp() {
             try {
                 const { pageId } = req.params;
                 const infoPage = await airtableService.getRecord('informational_pages', pageId);
-                res.json(infoPage);
+                const formattedPage = {
+                    id: infoPage.id,
+                    title: infoPage.fields.pageTitle,
+                    order: infoPage.fields.order,
+                    attachment: infoPage.fields.pageAttachments,
+                };
+                res.json(formattedPage);
             }
             catch (error) {
                 res.status(500).json({ error: 'Failed to fetch info page' });
@@ -379,7 +401,16 @@ async function initializeApp() {
         app.post('/api/info-pages', async (req, res) => {
             try {
                 const { recordsToCreate } = req.body;
-                const createdRecords = await airtableService.createRecords(recordsToCreate, 'informational_pages');
+                const formattedRecords = recordsToCreate.map(record => {
+                    return {
+                        fields: {
+                            pageTitle: record.title,
+                            order: record.order,
+                            pageAttachments: record.attachment,
+                        }
+                    };
+                });
+                const createdRecords = await airtableService.createRecords(formattedRecords, 'informational_pages');
                 res.json(createdRecords);
             } catch (error) {
                 res.status(500).json({ error: 'Failed to create info page' });
