@@ -356,6 +356,7 @@ async function initializeApp() {
             }
         });
 
+        // GET all info pages
         app.get('/api/info-pages', async (req, res) => {
             try {
                 const infoPages = await airtableService.getAllRecordsFromTable('informational_pages');
@@ -366,7 +367,6 @@ async function initializeApp() {
                         id: record.id,
                         title: record.fields.pageTitle,
                         order: record.fields.order,
-                        attachment: record.fields.pageAttachments,
                     };
                 });
 
@@ -381,6 +381,7 @@ async function initializeApp() {
             }
         });
 
+        // GET a single info page
         app.get('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
@@ -390,6 +391,7 @@ async function initializeApp() {
                     title: infoPage.fields.pageTitle,
                     order: infoPage.fields.order,
                     attachment: infoPage.fields.pageAttachments,
+                    content: infoPage.fields.pageContent,
                 };
                 res.json(formattedPage);
             }
@@ -398,6 +400,7 @@ async function initializeApp() {
             }
         });
 
+        // POST (create) a new info page
         app.post('/api/info-pages', async (req, res) => {
             try {
                 const { recordsToCreate } = req.body;
@@ -407,6 +410,7 @@ async function initializeApp() {
                             pageTitle: record.title,
                             order: record.order,
                             pageAttachments: record.attachment,
+                            pageContent: record.content,
                         }
                     };
                 });
@@ -417,6 +421,7 @@ async function initializeApp() {
             }
         });
 
+        // PATCH (update) an info page
         app.patch('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
@@ -429,6 +434,7 @@ async function initializeApp() {
             }
         });
 
+        // DELETE an info page
         app.delete('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
