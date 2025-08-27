@@ -422,15 +422,16 @@ async function initializeApp() {
             }
         });
 
-        // PATCH (update) an info page -> CORRECTED
+        // PATCH (update) an info page -> ENHANCED WITH DEBUGGING
         app.patch('/api/info-pages/:pageId', async (req, res) => {
+            const { pageId } = req.params;
+            console.log(`[PATCH /api/info-pages/${pageId}] - Request received.`);
+
             try {
-                const { pageId } = req.params;
-                // The frontend sends a simple object: { title, content }
+                console.log('Request Body:', req.body); // <-- LOG 1: What did the frontend send?
+
                 const { title, content } = req.body;
 
-                // Build the Airtable fields object dynamically.
-                // This ensures we only update the data that was actually sent.
                 const fieldsToUpdate = {};
                 if (title !== undefined) {
                     fieldsToUpdate.pageTitle = title;
@@ -439,20 +440,23 @@ async function initializeApp() {
                     fieldsToUpdate.pageContent = content;
                 }
 
-                // If the request body was empty or didn't contain valid fields,
-                // we shouldn't proceed.
+                console.log('Fields to Update:', fieldsToUpdate); // <-- LOG 2: What are we preparing to send?
+
                 if (Object.keys(fieldsToUpdate).length === 0) {
+                    console.log('Update failed: No valid fields provided.');
                     return res.status(400).json({ error: 'No valid fields to update were provided.' });
                 }
 
-                // The airtableService.updateRecord function expects an object with a 'fields' key
                 const payload = { fields: fieldsToUpdate };
+                console.log('Payload for Airtable:', JSON.stringify(payload, null, 2)); // <-- LOG 3: What is the final object for Airtable?
 
                 const updatedRecord = await airtableService.updateRecord(pageId, payload, 'informational_pages');
+
+                console.log('Update successful.');
                 res.json(updatedRecord);
 
             } catch (error) {
-                console.error(`Failed to update info page ${req.params.pageId}:`, error);
+                console.error(`[PATCH /api/info-pages/${pageId}] - !! ERROR:`, error); // <-- LOG 4: Catch the specific server error
                 res.status(500).json({ error: 'Failed to update info page' });
             }
         });
