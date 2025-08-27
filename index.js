@@ -422,13 +422,15 @@ async function initializeApp() {
             }
         });
 
-        // PATCH (update) an info page -> MODIFIED
+        // PATCH (update) an info page -> CORRECTED
         app.patch('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
-                const { title, content } = req.body; // Expect a flat object { title, content }
+                // The frontend sends a simple object: { title, content }
+                const { title, content } = req.body;
 
-                // Build the fields object dynamically to only update what's provided
+                // Build the Airtable fields object dynamically.
+                // This ensures we only update the data that was actually sent.
                 const fieldsToUpdate = {};
                 if (title !== undefined) {
                     fieldsToUpdate.pageTitle = title;
@@ -437,11 +439,16 @@ async function initializeApp() {
                     fieldsToUpdate.pageContent = content;
                 }
 
+                // If the request body was empty or didn't contain valid fields,
+                // we shouldn't proceed.
                 if (Object.keys(fieldsToUpdate).length === 0) {
-                    return res.status(400).json({ error: 'No fields to update were provided.' });
+                    return res.status(400).json({ error: 'No valid fields to update were provided.' });
                 }
 
-                const updatedRecord = await airtableService.updateRecord(pageId, { fields: fieldsToUpdate }, 'informational_pages');
+                // The airtableService.updateRecord function expects an object with a 'fields' key
+                const payload = { fields: fieldsToUpdate };
+
+                const updatedRecord = await airtableService.updateRecord(pageId, payload, 'informational_pages');
                 res.json(updatedRecord);
 
             } catch (error) {
