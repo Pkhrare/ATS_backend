@@ -422,7 +422,7 @@ async function initializeApp() {
             }
         });
 
-        // PATCH (update) an info page -> ENHANCED WITH DEBUGGING
+        // PATCH (update) an info page -> ENHANCED WITH DEBUGGING 
         app.patch('/api/info-pages/:pageId', async (req, res) => {
             const { pageId } = req.params;
             console.log(`[PATCH /api/info-pages/${pageId}] - Request received.`);
