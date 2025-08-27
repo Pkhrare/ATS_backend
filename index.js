@@ -404,7 +404,7 @@ async function initializeApp() {
                 // Find the highest current order to place the new page at the end
                 const allPages = await airtableService.getAllRecordsFromTable('informational_pages');
                 const maxOrder = allPages.reduce((max, p) => Math.max(max, p.fields.order || 0), 0);
-
+                console.log('Max Order:', maxOrder);
                 const recordToCreate = {
                     fields: {
                         pageTitle: title,
@@ -414,6 +414,7 @@ async function initializeApp() {
                 };
 
                 const createdRecord = await airtableService.createRecords(recordToCreate, 'informational_pages');
+                console.log('Created Record:', createdRecord);
                 res.status(201).json(createdRecord); // Use 201 for resource creation
 
             } catch (error) {
