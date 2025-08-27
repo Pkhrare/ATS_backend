@@ -423,11 +423,18 @@ async function initializeApp() {
 
         // PATCH (update) an info page
         app.patch('/api/info-pages/:pageId', async (req, res) => {
-            try {
-                
+            try {                
                 const { fields } = req.body;
                 const { id, fieldsToUpdate } = fields;
-                const updatedRecord = await airtableService.updateRecord(id, fieldsToUpdate, 'informational_pages');
+                const formattedFields = {
+                    fields: {
+                        pageTitle: fieldsToUpdate.title,
+                        order: fieldsToUpdate.order,
+                        pageAttachments: fieldsToUpdate.attachment,
+                        pageContent: fieldsToUpdate.content,
+                    }
+                };
+                const updatedRecord = await airtableService.updateRecord(id, formattedFields, 'informational_pages');
                 res.json(updatedRecord);
             }
             catch (error) {
