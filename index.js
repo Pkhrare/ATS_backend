@@ -447,10 +447,9 @@ async function initializeApp() {
                     return res.status(400).json({ error: 'No valid fields to update were provided.' });
                 }
 
-                const payload = { fields: fieldsToUpdate };
-                console.log('Payload for Airtable:', JSON.stringify(payload, null, 2)); // <-- LOG 3: What is the final object for Airtable?
+                console.log('Payload for Airtable:', JSON.stringify(fieldsToUpdate, null, 2)); // <-- LOG 3: What is the final object for Airtable?
 
-                const updatedRecord = await airtableService.updateRecord(pageId, payload, 'informational_pages');
+                const updatedRecord = await airtableService.updateRecord(pageId, fieldsToUpdate, 'informational_pages');
 
                 console.log('Update successful.');
                 res.json(updatedRecord);
