@@ -413,7 +413,7 @@ async function initializeApp() {
                     }
                 };
 
-                const createdRecord = await airtableService.createRecord(recordToCreate, 'informational_pages');
+                const createdRecord = await airtableService.createRecords(recordToCreate, 'informational_pages');
                 res.status(201).json(createdRecord); // Use 201 for resource creation
 
             } catch (error) {
