@@ -392,30 +392,41 @@ async function initializeApp() {
             }
         });
 
-        // POST (create) a new info page -> MODIFIED
+        // POST (create) a new info page -> CORRECTED
         app.post('/api/info-pages', async (req, res) => {
             try {
-                const { title } = req.body; // Expect a simple { title: "..." } object
-                console.log('Title:', title);
-                if (!title) {
+                const { title } = req.body;
+
+                if (!title || !title.trim()) {
                     return res.status(400).json({ error: 'Title is required' });
                 }
 
-                // Find the highest current order to place the new page at the end
                 const allPages = await airtableService.getAllRecordsFromTable('informational_pages');
                 const maxOrder = allPages.reduce((max, p) => Math.max(max, p.fields.order || 0), 0);
-                console.log('Max Order:', maxOrder);
+
                 const recordToCreate = {
                     fields: {
-                        pageTitle: title,
-                        pageContent: '', // Start with empty content
+                        pageTitle: title.trim(),
+                        pageContent: '',
                         order: maxOrder + 1,
                     }
                 };
 
-                const createdRecord = await airtableService.createRecords(recordToCreate, 'informational_pages');
-                console.log('Created Record:', createdRecord);
-                res.status(201).json(createdRecord); // Use 201 for resource creation
+                // --- FIX PART 1: Pass the record inside an array ---
+                const airtableResponse = await airtableService.createRecords([recordToCreate], 'informational_pages');
+
+                // --- FIX PART 2: Unwrap the response from your service ---
+                // Your service returns { records: [...] }, so we need to get the first item from that array.
+                const createdRecord = airtableResponse.records[0];
+
+                // --- FIX PART 3: Flatten the object for the frontend ---
+                const formattedResponse = {
+                    id: createdRecord.id,
+                    title: createdRecord.fields.pageTitle,
+                    order: createdRecord.fields.order,
+                };
+
+                res.status(201).json(formattedResponse);
 
             } catch (error) {
                 console.error('Failed to create info page:', error);
