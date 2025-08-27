@@ -396,7 +396,7 @@ async function initializeApp() {
         app.post('/api/info-pages', async (req, res) => {
             try {
                 const { title } = req.body; // Expect a simple { title: "..." } object
-
+                console.log('Title:', title);
                 if (!title) {
                     return res.status(400).json({ error: 'Title is required' });
                 }
