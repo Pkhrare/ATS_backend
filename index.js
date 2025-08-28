@@ -387,7 +387,6 @@ async function initializeApp() {
                     id: infoPage.id,
                     title: infoPage.fields.pageTitle,
                     order: infoPage.fields.order,
-                    attachment: infoPage.fields.pageAttachments, // Make sure this Airtable field name is correct
                     content: infoPage.fields.pageContent,
                 };
                 res.json(formattedPage);
@@ -439,35 +438,64 @@ async function initializeApp() {
             }
         });
 
-        // PATCH (update) an info page -> ENHANCED WITH DEBUGGING 
+        // UPDATE your existing PATCH endpoint to include attachment handling:
         app.patch('/api/info-pages/:pageId', async (req, res) => {
             const { pageId } = req.params;
             console.log(`[PATCH /api/info-pages/${pageId}] - Request received.`);
 
             try {
-                console.log('Request Body:', req.body); // <-- LOG 1: What did the frontend send?
+                console.log('Request Body:', req.body);
 
-                const { title, content, attachment } = req.body;
+                const { title, content } = req.body;
 
                 const fieldsToUpdate = {};
+
+                // Handle title update (still stored directly)
                 if (title !== undefined) {
                     fieldsToUpdate.pageTitle = title;
                 }
+
+               
+
+                // Handle content update (now via attachment) - this is separate from the pageAttachments field
                 if (content !== undefined) {
-                    fieldsToUpdate.pageContent = content;
-                }
-                if (attachment !== undefined) {
-                    fieldsToUpdate.pageAttachments = attachment;
+                    // Save content as attachment instead of direct field update
+                    const fileName = generateContentFileName('informational_pages', pageId, 'pageContent');
+
+                    const file = bucket.file(fileName);
+
+                    await file.save(content, {
+                        metadata: {
+                            contentType: 'application/json',
+                            metadata: {
+                                recordId: pageId,
+                                tableName: 'informational_pages',
+                                fieldName: 'pageContent',
+                                updatedAt: new Date().toISOString()
+                            }
+                        }
+                    });
+
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+                    const contentAttachment = {
+                        url: publicUrl,
+                        filename: fileName,
+                        type: 'application/json'
+                    };
+
+                    // Store the content attachment in the pageContent field (which is now an attachment field)
+                    fieldsToUpdate.pageContent = [contentAttachment];
                 }
 
-                console.log('Fields to Update:', fieldsToUpdate); // <-- LOG 2: What are we preparing to send?
+                console.log('Fields to Update:', fieldsToUpdate);
 
                 if (Object.keys(fieldsToUpdate).length === 0) {
                     console.log('Update failed: No valid fields provided.');
                     return res.status(400).json({ error: 'No valid fields to update were provided.' });
                 }
 
-                console.log('Payload for Airtable:', JSON.stringify(fieldsToUpdate, null, 2)); // <-- LOG 3: What is the final object for Airtable?
+                console.log('Payload for Airtable:', JSON.stringify(fieldsToUpdate, null, 2));
 
                 const updatedRecord = await airtableService.updateRecord(pageId, fieldsToUpdate, 'informational_pages');
 
@@ -475,7 +503,7 @@ async function initializeApp() {
                 res.json(updatedRecord);
 
             } catch (error) {
-                console.error(`[PATCH /api/info-pages/${pageId}] - !! ERROR:`, error); // <-- LOG 4: Catch the specific server error
+                console.error(`[PATCH /api/info-pages/${pageId}] - !! ERROR:`, error);
                 res.status(500).json({ error: 'Failed to update info page' });
             }
         });
