@@ -378,70 +378,22 @@ async function initializeApp() {
             }
         });
 
-        // PATCH (update) an info page -> UPDATED FOR ATTACHMENT STORAGE
-        app.patch('/api/info-pages/:pageId', async (req, res) => {
-            const { pageId } = req.params;
-            console.log(`[PATCH /api/info-pages/${pageId}] - Request received.`);
-
+        // GET a single info page -> This is also perfect. No changes needed.
+        app.get('/api/info-pages/:pageId', async (req, res) => {
             try {
-                console.log('Request Body:', req.body);
-
-                const { title, content } = req.body;
-
-                const fieldsToUpdate = {};
-
-                // Handle title update (still stored directly)
-                if (title !== undefined) {
-                    fieldsToUpdate.pageTitle = title;
-                }
-
-                // Handle content update (now via attachment)
-                if (content !== undefined) {
-                    // Save content as attachment instead of direct field update
-                    const fileName = generateContentFileName('informational_pages', pageId, 'pageContent');
-
-                    const file = bucket.file(fileName);
-
-                    await file.save(content, {
-                        metadata: {
-                            contentType: 'application/json',
-                            metadata: {
-                                recordId: pageId,
-                                tableName: 'informational_pages',
-                                fieldName: 'pageContent',
-                                updatedAt: new Date().toISOString()
-                            }
-                        }
-                    });
-
-                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-
-                    const attachment = {
-                        url: publicUrl,
-                        filename: fileName,
-                        type: 'application/json'
-                    };
-
-                    fieldsToUpdate.pageContent = [attachment];
-                }
-
-                console.log('Fields to Update:', fieldsToUpdate);
-
-                if (Object.keys(fieldsToUpdate).length === 0) {
-                    console.log('Update failed: No valid fields provided.');
-                    return res.status(400).json({ error: 'No valid fields to update were provided.' });
-                }
-
-                console.log('Payload for Airtable:', JSON.stringify(fieldsToUpdate, null, 2));
-
-                const updatedRecord = await airtableService.updateRecord(pageId, fieldsToUpdate, 'informational_pages');
-
-                console.log('Update successful.');
-                res.json(updatedRecord);
-
+                const { pageId } = req.params;
+                const infoPage = await airtableService.getRecord('informational_pages', pageId);
+                const formattedPage = {
+                    id: infoPage.id,
+                    title: infoPage.fields.pageTitle,
+                    order: infoPage.fields.order,
+                    attachment: infoPage.fields.pageAttachments, // Make sure this Airtable field name is correct
+                    content: infoPage.fields.pageContent,
+                };
+                res.json(formattedPage);
             } catch (error) {
-                console.error(`[PATCH /api/info-pages/${pageId}] - !! ERROR:`, error);
-                res.status(500).json({ error: 'Failed to update info page' });
+                console.error(`Failed to fetch info page ${req.params.pageId}:`, error);
+                res.status(500).json({ error: 'Failed to fetch info page' });
             }
         });
 
