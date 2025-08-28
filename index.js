@@ -487,6 +487,73 @@ async function initializeApp() {
             }
         });
 
+        // POST (create) a new image asset
+        app.post('/api/upload-image', upload.single('file'), async (req, res) => {
+            try {
+                const { sourceTable, sourceRecordId } = req.body;
+                const file = req.file;
+
+                if (!file || !sourceTable || !sourceRecordId) {
+                    return res.status(400).json({ error: 'File, sourceTable, and sourceRecordId are required.' });
+                }
+
+                // --- Step 1: Create a new, empty asset record in Airtable ---
+                const assetRecord = {
+                    fields: {
+                        assetName: file.originalname,
+                        sourceTable: sourceTable,
+                        sourceRecordID: sourceRecordId,
+                    }
+                };
+                const createResponse = await airtableService.createRecords([assetRecord], 'image_assets');
+                const newAssetId = createResponse.records[0].id;
+
+                // --- Step 2: Now, upload the file to GCS and attach it to the new record ---
+                // This part reuses the exact same logic as your existing /api/upload endpoint.
+                const blob = bucket.file(Date.now() + '-' + file.originalname);
+                const blobStream = blob.createWriteStream({
+                    resumable: false,
+                });
+
+                blobStream.on('error', err => {
+                    console.error('GCS stream error during image asset upload:', err);
+                    res.status(500).json({ error: `GCS Upload Stream Error: ${err.message}` });
+                });
+
+                blobStream.on('finish', async () => {
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+
+                    try {
+                        // Update the 'imageFile' field of the record we just created.
+                        // Since this is a new record, there are no existing attachments to worry about.
+                        const newAttachment = {
+                            url: publicUrl,
+                            filename: file.originalname,
+                        };
+
+                        await airtableService.updateRecord(
+                            newAssetId,
+                            { imageFile: [newAttachment] }, // The field name in your image_assets table
+                            'image_assets'
+                        );
+
+                        // --- Step 3: Send the public URL back to the frontend ---
+                        res.status(200).json({ url: publicUrl });
+
+                    } catch (error) {
+                        console.error("Error updating image_assets record in Airtable:", error);
+                        res.status(500).json({ error: `Failed to update Airtable record: ${error.message}` });
+                    }
+                });
+
+                blobStream.end(file.buffer);
+
+            } catch (error) {
+                console.error('Failed to process image upload:', error);
+                res.status(500).json({ error: 'Failed to upload image' });
+            }
+        });
+
         // ----- Socket.IO Connection -----
         io.on('connection', (socket) => {
             console.log('a user connected');
