@@ -20,6 +20,11 @@ const allowedOrigins = [
     'https://waiverprojects.web.app' // deployed frontend
 ];
 
+// Helper function to generate consistent filenames
+const generateContentFileName = (tableName, recordId, fieldName) => {
+    return `content-${tableName}-${recordId}-${fieldName}.json`;
+};
+
 
 async function initializeApp() {
     try {
@@ -373,22 +378,70 @@ async function initializeApp() {
             }
         });
 
-        // GET a single info page -> This is also perfect. No changes needed.
-        app.get('/api/info-pages/:pageId', async (req, res) => {
+        // PATCH (update) an info page -> UPDATED FOR ATTACHMENT STORAGE
+        app.patch('/api/info-pages/:pageId', async (req, res) => {
+            const { pageId } = req.params;
+            console.log(`[PATCH /api/info-pages/${pageId}] - Request received.`);
+
             try {
-                const { pageId } = req.params;
-                const infoPage = await airtableService.getRecord('informational_pages', pageId);
-                const formattedPage = {
-                    id: infoPage.id,
-                    title: infoPage.fields.pageTitle,
-                    order: infoPage.fields.order,
-                    attachment: infoPage.fields.pageAttachments, // Make sure this Airtable field name is correct
-                    content: infoPage.fields.pageContent,
-                };
-                res.json(formattedPage);
+                console.log('Request Body:', req.body);
+
+                const { title, content } = req.body;
+
+                const fieldsToUpdate = {};
+
+                // Handle title update (still stored directly)
+                if (title !== undefined) {
+                    fieldsToUpdate.pageTitle = title;
+                }
+
+                // Handle content update (now via attachment)
+                if (content !== undefined) {
+                    // Save content as attachment instead of direct field update
+                    const fileName = generateContentFileName('informational_pages', pageId, 'pageContent');
+
+                    const file = bucket.file(fileName);
+
+                    await file.save(content, {
+                        metadata: {
+                            contentType: 'application/json',
+                            metadata: {
+                                recordId: pageId,
+                                tableName: 'informational_pages',
+                                fieldName: 'pageContent',
+                                updatedAt: new Date().toISOString()
+                            }
+                        }
+                    });
+
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+                    const attachment = {
+                        url: publicUrl,
+                        filename: fileName,
+                        type: 'application/json'
+                    };
+
+                    fieldsToUpdate.pageContent = [attachment];
+                }
+
+                console.log('Fields to Update:', fieldsToUpdate);
+
+                if (Object.keys(fieldsToUpdate).length === 0) {
+                    console.log('Update failed: No valid fields provided.');
+                    return res.status(400).json({ error: 'No valid fields to update were provided.' });
+                }
+
+                console.log('Payload for Airtable:', JSON.stringify(fieldsToUpdate, null, 2));
+
+                const updatedRecord = await airtableService.updateRecord(pageId, fieldsToUpdate, 'informational_pages');
+
+                console.log('Update successful.');
+                res.json(updatedRecord);
+
             } catch (error) {
-                console.error(`Failed to fetch info page ${req.params.pageId}:`, error);
-                res.status(500).json({ error: 'Failed to fetch info page' });
+                console.error(`[PATCH /api/info-pages/${pageId}] - !! ERROR:`, error);
+                res.status(500).json({ error: 'Failed to update info page' });
             }
         });
 
@@ -551,6 +604,186 @@ async function initializeApp() {
             } catch (error) {
                 console.error('Failed to process image upload:', error);
                 res.status(500).json({ error: 'Failed to upload image' });
+            }
+        });
+
+        // ===================================
+        // ATTACHMENT-BASED CONTENT STORAGE ENDPOINTS
+        // ===================================
+
+        // SAVE CONTENT AS ATTACHMENT
+        app.post('/api/save-content-attachment', async (req, res) => {
+            try {
+                const { recordId, tableName, fieldName, content } = req.body;
+
+                // Validation
+                if (!recordId || !tableName || !fieldName || !content) {
+                    return res.status(400).json({
+                        error: 'Missing required fields: recordId, tableName, fieldName, content'
+                    });
+                }
+
+                console.log(`Saving content attachment for ${tableName}.${fieldName}, record: ${recordId}`);
+
+                // Generate consistent filename (will overwrite existing file)
+                const fileName = generateContentFileName(tableName, recordId, fieldName);
+
+                // Upload JSON content to Google Cloud Storage
+                const file = bucket.file(fileName);
+
+                await file.save(JSON.stringify(content), {
+                    metadata: {
+                        contentType: 'application/json',
+                        metadata: {
+                            recordId: recordId,
+                            tableName: tableName,
+                            fieldName: fieldName,
+                            uploadedAt: new Date().toISOString()
+                        }
+                    }
+                });
+
+                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+                // Update the record with attachment info
+                const attachment = {
+                    url: publicUrl,
+                    filename: fileName,
+                    type: 'application/json'
+                };
+
+                const updatePayload = {};
+                updatePayload[fieldName] = [attachment];
+
+                await airtableService.updateRecord(recordId, updatePayload, tableName);
+
+                console.log(`Successfully saved content attachment: ${publicUrl}`);
+                res.json({
+                    success: true,
+                    url: publicUrl,
+                    filename: fileName
+                });
+
+            } catch (error) {
+                console.error('Error saving content attachment:', error);
+                res.status(500).json({
+                    error: 'Failed to save content attachment',
+                    details: error.message
+                });
+            }
+        });
+
+        // GET CONTENT FROM ATTACHMENT
+        app.get('/api/get-content-attachment/:tableName/:recordId/:fieldName', async (req, res) => {
+            try {
+                const { tableName, recordId, fieldName } = req.params;
+
+                console.log(`Fetching content attachment for ${tableName}.${fieldName}, record: ${recordId}`);
+
+                // Get record from Airtable
+                const record = await airtableService.getRecord(tableName, recordId);
+                const attachments = record.fields[fieldName];
+
+                if (!attachments || attachments.length === 0) {
+                    console.log(`No attachment found for ${tableName}.${fieldName}, record: ${recordId}`);
+                    return res.json({ content: null });
+                }
+
+                // Get the first (and should be only) attachment
+                const attachment = attachments[0];
+
+                // Fetch JSON content from the attachment URL
+                const response = await fetch(attachment.url);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch attachment: ${response.status} ${response.statusText}`);
+                }
+
+                const content = await response.text();
+
+                console.log(`Successfully fetched content attachment for ${tableName}.${fieldName}`);
+                res.json({
+                    content: content,
+                    filename: attachment.filename,
+                    url: attachment.url
+                });
+
+            } catch (error) {
+                console.error('Error fetching content attachment:', error);
+                res.status(500).json({
+                    error: 'Failed to fetch content attachment',
+                    details: error.message
+                });
+            }
+        });
+
+        // HYBRID CONTENT GETTER (ATTACHMENT + FALLBACK)
+        app.get('/api/get-content-hybrid/:tableName/:recordId/:fieldName', async (req, res) => {
+            try {
+                const { tableName, recordId, fieldName } = req.params;
+
+                console.log(`Fetching hybrid content for ${tableName}.${fieldName}, record: ${recordId}`);
+
+                // Get record from Airtable
+                const record = await airtableService.getRecord(tableName, recordId);
+
+                // Try attachment first
+                const attachments = record.fields[fieldName];
+
+                if (attachments && attachments.length > 0) {
+                    try {
+                        const attachment = attachments[0];
+                        const response = await fetch(attachment.url);
+
+                        if (response.ok) {
+                            const content = await response.text();
+                            console.log(`Found attachment content for ${tableName}.${fieldName}`);
+                            return res.json({
+                                content: content,
+                                source: 'attachment',
+                                filename: attachment.filename
+                            });
+                        }
+                    } catch (attachmentError) {
+                        console.warn(`Attachment fetch failed for ${tableName}.${fieldName}:`, attachmentError.message);
+                    }
+                }
+
+                // Fallback to old field names for existing data
+                let fallbackFieldName;
+                switch (fieldName) {
+                    case 'Notes':
+                        fallbackFieldName = 'Notes';
+                        break;
+                    case 'description':
+                        fallbackFieldName = 'description';
+                        break;
+                    case 'pageContent':
+                        fallbackFieldName = 'pageContent';
+                        break;
+                    default:
+                        fallbackFieldName = fieldName;
+                }
+
+                const fallbackContent = record.fields[fallbackFieldName];
+
+                if (fallbackContent) {
+                    console.log(`Found fallback content for ${tableName}.${fallbackFieldName}`);
+                    return res.json({
+                        content: fallbackContent,
+                        source: 'fallback'
+                    });
+                }
+
+                console.log(`No content found for ${tableName}.${fieldName}, record: ${recordId}`);
+                res.json({ content: null, source: 'none' });
+
+            } catch (error) {
+                console.error('Error fetching hybrid content:', error);
+                res.status(500).json({
+                    error: 'Failed to fetch hybrid content',
+                    details: error.message
+                });
             }
         });
 
