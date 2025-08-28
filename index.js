@@ -478,10 +478,10 @@ async function initializeApp() {
 
                     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
+                    // Airtable expects attachments in a specific format
                     const contentAttachment = {
                         url: publicUrl,
                         filename: fileName,
-                        type: 'application/json'
                     };
 
                     // Store the content attachment in the pageContent field (which is now an attachment field)
@@ -595,24 +595,24 @@ async function initializeApp() {
         app.post('/api/save-content-attachment', async (req, res) => {
             try {
                 const { recordId, tableName, fieldName, content } = req.body;
-
+                
                 // Validation
                 if (!recordId || !tableName || !fieldName || !content) {
-                    return res.status(400).json({
-                        error: 'Missing required fields: recordId, tableName, fieldName, content'
+                    return res.status(400).json({ 
+                        error: 'Missing required fields: recordId, tableName, fieldName, content' 
                     });
                 }
-
+        
                 console.log(`Saving content attachment for ${tableName}.${fieldName}, record: ${recordId}`);
-
+                
                 // Generate consistent filename (will overwrite existing file)
                 const fileName = generateContentFileName(tableName, recordId, fieldName);
-
+                
                 // Upload JSON content to Google Cloud Storage
                 const file = bucket.file(fileName);
-
+                
                 await file.save(JSON.stringify(content), {
-                    metadata: {
+                    metadata: { 
                         contentType: 'application/json',
                         metadata: {
                             recordId: recordId,
@@ -622,33 +622,36 @@ async function initializeApp() {
                         }
                     }
                 });
-
+                
                 const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-
-                // Update the record with attachment info
+                
+                // FIX: Use the correct Airtable attachment format (same as your other upload endpoints)
                 const attachment = {
                     url: publicUrl,
                     filename: fileName,
-                    type: 'application/json'
+                    // Remove the 'type' field - Airtable doesn't expect it in this format
                 };
-
+                
                 const updatePayload = {};
                 updatePayload[fieldName] = [attachment];
-
+                
+                console.log('About to update Airtable record:', recordId);
+                console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
+                
                 await airtableService.updateRecord(recordId, updatePayload, tableName);
-
+                
                 console.log(`Successfully saved content attachment: ${publicUrl}`);
-                res.json({
-                    success: true,
+                res.json({ 
+                    success: true, 
                     url: publicUrl,
-                    filename: fileName
+                    filename: fileName 
                 });
-
+                
             } catch (error) {
                 console.error('Error saving content attachment:', error);
-                res.status(500).json({
+                res.status(500).json({ 
                     error: 'Failed to save content attachment',
-                    details: error.message
+                    details: error.message 
                 });
             }
         });
