@@ -514,11 +514,11 @@ async function initializeApp() {
             }
         });
 
-        // DELETE an info page 
+        // DELETE an info page
         app.delete('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
-                const deletedRecord = await airtableService.deleteRecord(pageId, 'informational_pages');
+                const deletedRecord = await airtableService.deleteMultipleRecords(pageId, 'informational_pages');
                 res.json(deletedRecord);
             } catch (error) {
                 console.error(`Failed to delete info page ${req.params.pageId}:`, error);
