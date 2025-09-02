@@ -399,7 +399,7 @@ async function initializeApp() {
         // POST (create) a new info page -> CORRECTED
         app.post('/api/info-pages', async (req, res) => {
             try {
-                const { title } = req.body;
+                const { title, icon } = req.body;
 
                 if (!title || !title.trim()) {
                     return res.status(400).json({ error: 'Title is required' });
@@ -413,6 +413,7 @@ async function initializeApp() {
                         pageTitle: title.trim(),
                         pageContent: '',
                         order: maxOrder + 1,
+                        icon: icon,
                     }
                 };
 
@@ -428,6 +429,7 @@ async function initializeApp() {
                     id: createdRecord.id,
                     title: createdRecord.fields.pageTitle,
                     order: createdRecord.fields.order,
+                    icon: createdRecord.fields.icon,
                 };
 
                 res.status(201).json(formattedResponse);
@@ -446,7 +448,7 @@ async function initializeApp() {
             try {
                 console.log('Request Body:', req.body);
 
-                const { title, content } = req.body;
+                const { title, content, icon } = req.body;
 
                 const fieldsToUpdate = {};
 
@@ -455,7 +457,9 @@ async function initializeApp() {
                     fieldsToUpdate.pageTitle = title;
                 }
 
-               
+                if (icon !== undefined) {
+                    fieldsToUpdate.icon = icon;
+                }
 
                 // Handle content update (now via attachment) - this is separate from the pageAttachments field
                 if (content !== undefined) {
@@ -508,7 +512,7 @@ async function initializeApp() {
             }
         });
 
-        // DELETE an info page -> This is fine. No changes needed.
+        // DELETE an info page 
         app.delete('/api/info-pages/:pageId', async (req, res) => {
             try {
                 const { pageId } = req.params;
