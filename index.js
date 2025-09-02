@@ -369,6 +369,7 @@ async function initializeApp() {
                     id: record.id,
                     title: record.fields.pageTitle,
                     order: record.fields.order,
+                    icon: record.fields.icon,
                 }));
                 formattedPages.sort((a, b) => a.order - b.order);
                 res.json(formattedPages);
