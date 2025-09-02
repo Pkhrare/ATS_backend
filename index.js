@@ -388,6 +388,7 @@ async function initializeApp() {
                     title: infoPage.fields.pageTitle,
                     order: infoPage.fields.order,
                     content: infoPage.fields.pageContent,
+                    icon: infoPage.fields.icon,
                 };
                 res.json(formattedPage);
             } catch (error) {
