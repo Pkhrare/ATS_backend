@@ -274,8 +274,13 @@ const updateMultipleRecords = async (recordsToUpdate, tableName) => {
 const deleteMultipleRecords = async (recordIds, tableName) => {
     const table = getTableName(tableName);
     try {
-        const deletedRecords = await base(table).destroy(recordIds);
-        return deletedRecords;
+        const allDeletedRecords = [];
+        for (let i = 0; i < recordIds.length; i += 10) {
+            const chunk = recordIds.slice(i, i + 10);
+            const deletedChunk = await base(table).destroy(chunk);
+            allDeletedRecords.push(...deletedChunk);
+        }
+        return { records: allDeletedRecords };
     } catch (error) {
         console.error(`Airtable Service Error (deleteMultipleRecords on ${table}):`, error);
         throw error;
