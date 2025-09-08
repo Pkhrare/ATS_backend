@@ -89,8 +89,16 @@ const getTableName = (name) => {
 // Get all records from the main table
 const getRecords = async () => {
     try {
-        const records = await base(MAIN_TABLE_NAME).select().all();
-        return records.map(record => ({ id: record.id, fields: record.fields }));
+        const records = await base(MAIN_TABLE_NAME).select({
+            sort: [
+                { field: "Last Updated", direction: "desc" } // or "asc"
+            ]
+        }).all();
+
+        return records.map(record => ({
+            id: record.id,
+            fields: record.fields
+        }));
     } catch (error) {
         console.error('Airtable Service Error (getRecords):', error);
         throw error;
