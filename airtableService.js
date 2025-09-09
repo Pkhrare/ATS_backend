@@ -327,9 +327,14 @@ const getAllRecordsFromTable = async (tableName) => {
 
 const authenticateClient = async (projectName, projectId) => {
     const table = getTableName('mainTable');
-    const formula = `AND(%7BProject+Name%7D+%3D+%22${projectName}%22%2C+%7BProject+ID%7D+%3D+%22${projectId}%22)`;
+    
+    const escapedProjectName = projectName.replace(/"/g, '\\"');
+    const escapedProjectId = projectId.replace(/"/g, '\\"');
+
+    const formula = `AND({Project Name} = "${escapedProjectName}", {Project ID} = "${escapedProjectId}")`;
+
     try {
-        const url = `/${table}?filterByFormula=${formula}`;
+        const url = `/${table}?filterByFormula=${encodeURIComponent(formula)}`;
         const response = await airtableApi.get(url);
         return response.data;
     } catch (error) {
