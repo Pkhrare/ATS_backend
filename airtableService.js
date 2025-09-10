@@ -45,6 +45,7 @@ const TASK_GROUPS_TABLE_NAME = 'tblCD3xEADjeAG3d4'
 const INFORMATIONAL_TABLE_NAME = 'tblM7936jKJeBdw36'
 const IMAGE_ASSETS_TABLE_NAME = 'tblTP0vUb0aMMTpIr'
 const TASK_APPROVALS_TABLE_NAME = 'tbl5BGGlcZSoIyqWz'
+const PROJECT_MESSAGES_TABLE_NAME = 'tblGYRMtiAQck5Xuy'
 // Re-usable axios instance for Airtable API
 
 
@@ -81,6 +82,8 @@ const getTableName = (name) => {
             return IMAGE_ASSETS_TABLE_NAME;
         case 'task_approval':
             return TASK_APPROVALS_TABLE_NAME;
+        case 'project_messages':
+            return PROJECT_MESSAGES_TABLE_NAME;
         default:
             return MAIN_TABLE_NAME;
     }
@@ -159,6 +162,9 @@ const getFilteredRecords = async (recordId, tableName) => {
             break;
         case 'task_approval':
             formula = `{id (from task_id)} = "${recordId}"`;
+            break;
+        case 'project_messages':
+            formula = `{Project ID (from project_id)} = "${recordId}"`;
             break;
         default:
             // Default logic for tables like 'activities' linked to a project.

@@ -313,6 +313,18 @@ async function initializeApp() {
         });
 
 
+        // GET project messages
+        app.get('/api/messages/:projectId/project_messages', async (req, res) => {
+            try {
+                const { projectId } = req.params;
+                const records = await airtableService.getFilteredRecords(projectId, 'project_messages');
+                res.json(records);
+            } catch (error) {
+                res.status(500).json({ error: 'Failed to fetch project messages' });
+            }
+        });
+
+
         // GET records by IDs
         app.post('/api/records/by-ids', async (req, res) => {
             try {
@@ -813,6 +825,34 @@ async function initializeApp() {
                 } catch (error) {
                     console.error('Error sending message:', error);
                     socket.emit('sendMessageError', { error: 'Failed to send message' });
+                }
+            });
+
+            socket.on('joinProjectRoom', (projectId) => {
+                socket.join(projectId);
+                console.log(`User joined project room: ${projectId}`);
+            });
+
+            socket.on('leaveProjectRoom', (projectId) => {
+                socket.leave(projectId);
+                console.log(`User left project room: ${projectId}`);
+            });
+
+            socket.on('sendProjectMessage', async ({ projectId, message, sender }) => {
+                try {
+                    const newMessage = {
+                        fields: {
+                            project_id: [projectId],
+                            message_text: message,
+                            sender: sender,
+                        }
+                    };
+                    const createdRecord = await airtableService.createRecords([newMessage], 'project_messages');
+
+                    io.to(projectId).emit('receiveProjectMessage', createdRecord.records[0]);
+                } catch (error) {
+                    console.error('Error sending project message:', error);
+                    socket.emit('sendProjectMessageError', { error: 'Failed to send project message' });
                 }
             });
 
