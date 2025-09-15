@@ -613,24 +613,24 @@ async function initializeApp() {
         app.post('/api/save-content-attachment', async (req, res) => {
             try {
                 const { recordId, tableName, fieldName, content } = req.body;
-                
+
                 // Validation
                 if (!recordId || !tableName || !fieldName || !content) {
-                    return res.status(400).json({ 
-                        error: 'Missing required fields: recordId, tableName, fieldName, content' 
+                    return res.status(400).json({
+                        error: 'Missing required fields: recordId, tableName, fieldName, content'
                     });
                 }
-        
+
                 console.log(`Saving content attachment for ${tableName}.${fieldName}, record: ${recordId}`);
-                
+
                 // Generate consistent filename (will overwrite existing file)
                 const fileName = generateContentFileName(tableName, recordId, fieldName);
-                
+
                 // Upload JSON content to Google Cloud Storage
                 const file = bucket.file(fileName);
-                
+
                 await file.save(JSON.stringify(content), {
-                    metadata: { 
+                    metadata: {
                         contentType: 'application/json',
                         metadata: {
                             recordId: recordId,
@@ -640,36 +640,36 @@ async function initializeApp() {
                         }
                     }
                 });
-                
+
                 const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-                
+
                 // FIX: Use the correct Airtable attachment format (same as your other upload endpoints)
                 const attachment = {
                     url: publicUrl,
                     filename: fileName,
                     // Remove the 'type' field - Airtable doesn't expect it in this format
                 };
-                
+
                 const updatePayload = {};
                 updatePayload[fieldName] = [attachment];
-                
+
                 console.log('About to update Airtable record:', recordId);
                 console.log('Update payload:', JSON.stringify(updatePayload, null, 2));
-                
+
                 await airtableService.updateRecord(recordId, updatePayload, tableName);
-                
+
                 console.log(`Successfully saved content attachment: ${publicUrl}`);
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     url: publicUrl,
-                    filename: fileName 
+                    filename: fileName
                 });
-                
+
             } catch (error) {
                 console.error('Error saving content attachment:', error);
-                res.status(500).json({ 
+                res.status(500).json({
                     error: 'Failed to save content attachment',
-                    details: error.message 
+                    details: error.message
                 });
             }
         });
@@ -855,6 +855,37 @@ async function initializeApp() {
                     socket.emit('sendProjectMessageError', { error: 'Failed to send project message' });
                 }
             });
+
+            // ... existing socket event handlers ...
+
+            socket.on('markMessagesAsRead', async ({ messageIds, tableName }) => {
+                try {
+                    if (!messageIds || messageIds.length === 0 || !tableName) return;
+
+                    console.log(`Marking ${messageIds.length} messages as read in ${tableName}`);
+
+                    const recordsToUpdate = messageIds.map(id => ({
+                        id: id,
+                        fields: {
+                            is_read: true
+                        }
+                    }));
+
+                    // You'll need a generic updateRecords function in your airtableService
+                    // similar to createRecords. I'm assuming one exists or you can create it.
+                    await airtableService.updateMultipleRecords(recordsToUpdate, tableName);
+
+                    // Optional: you could broadcast an event back to the room to inform
+                    // other clients that messages have been read, but for now we will
+                    // handle this optimistically on the client that triggers the read.
+
+                } catch (error) {
+                    console.error('Error marking messages as read:', error);
+                    socket.emit('markMessagesAsReadError', { error: 'Failed to mark messages as read' });
+                }
+            });
+
+            // ... rest of your socket event handlers ...
 
             socket.on('disconnect', () => {
                 console.log('user disconnected');
