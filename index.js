@@ -6,7 +6,7 @@ const multer = require('multer');
 const http = require('http');
 const { Server } = require("socket.io");
 const { getSecret, initializeSecrets } = require('./secrets');
-
+const { RecaptchaEnterpriseServiceClient } = require('@google-cloud/recaptcha-enterprise');
 const app = express();
 const server = http.createServer(app);
 
@@ -14,6 +14,10 @@ const server = http.createServer(app);
 let io;
 let bucket;
 let frontendUrl;
+let recaptchaClient;
+
+
+
 
 const allowedOrigins = [
     'http://localhost:5173',          // local dev
@@ -51,6 +55,8 @@ async function initializeApp() {
         // Initialize GCS
         const storage = new Storage();
         bucket = storage.bucket(bucketName);
+
+        recaptchaClient = new RecaptchaEnterpriseServiceClient();
 
         // All API routes and Socket.IO logic go here
         // The server will only be started after this section is fully defined.
@@ -717,6 +723,63 @@ async function initializeApp() {
                 });
             }
         });
+
+        // This is the endpoint your frontend will send the form data to.
+        app.post('/api/check-recaptcha', async (req, res) => {
+            try {
+                const { recaptchaKey, token, recaptchaAction } = req.body;
+
+                if (!token || !recaptchaKey || !recaptchaAction) {
+                    return res.status(400).json({ error: 'Recaptcha token, key, and action are required.' });
+                }
+
+                // NOTE: Ensure 'GCP_PROJECT_ID' is set in your secrets.
+                const recaptchaProjectId = await getSecret('GCP_PROJECT_ID');
+                if (!recaptchaProjectId) {
+                    console.error('GCP_PROJECT_ID secret is not set.');
+                    return res.status(500).json({ error: 'Server configuration error.' });
+                }
+
+                const projectPath = recaptchaClient.projectPath(recaptchaProjectId);
+
+                const request = {
+                    assessment: {
+                        event: {
+                            token: token,
+                            siteKey: recaptchaKey,
+                        },
+                    },
+                    parent: projectPath,
+                };
+
+                const [response] = await recaptchaClient.createAssessment(request);
+
+                if (!response.tokenProperties.valid) {
+                    console.error(`Recaptcha verification failed, invalid token: ${response.tokenProperties.invalidReason}`);
+                    return res.status(400).json({ error: 'Invalid Recaptcha token.' });
+                }
+
+                if (response.tokenProperties.action !== recaptchaAction) {
+                    console.error(`Recaptcha action mismatch. Expected: ${recaptchaAction}, Got: ${response.tokenProperties.action}`);
+                    return res.status(400).json({ error: 'Recaptcha action mismatch.' });
+                }
+
+                if (response.riskAnalysis.score < 0.5) {
+                    console.error(`Recaptcha check failed: low score (${response.riskAnalysis.score}).`);
+                    return res.status(403).json({ error: 'Recaptcha verification failed. Your request was considered suspicious.' });
+                }
+
+                console.log(`Recaptcha assessment passed with score: ${response.riskAnalysis.score}`);
+
+                // --- Recaptcha is valid, now process the form data ---
+                res.status(200).json({ success: true, message: 'Form submitted successfully.' });
+
+            } catch (error) {
+                console.error('Error in /api/check-recaptcha:', error);
+                res.status(500).json({ error: 'An unexpected error occurred during recaptcha check.' });
+            }   
+        });
+
 
         // HYBRID CONTENT GETTER (ATTACHMENT + FALLBACK)
         app.get('/api/get-content-hybrid/:tableName/:recordId/:fieldName', async (req, res) => {

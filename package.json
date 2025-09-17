@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google-cloud/recaptcha-enterprise": "^6.3.0",
     "@google-cloud/secret-manager": "^6.1.0",
     "@google-cloud/storage": "^7.16.0",
     "@lexical/react": "^0.34.0",
