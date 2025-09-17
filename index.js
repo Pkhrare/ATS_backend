@@ -39,7 +39,7 @@ async function initializeApp() {
         const bucketName = await getSecret('GCS_BUCKET_NAME');
         const airtableApiKey = await getSecret('AIRTABLE_API_KEY');
         const airtableBaseId = await getSecret('AIRTABLE_BASE_ID');
-
+        const recaptchaProjectId = await getSecret('GCP_PROJECT_ID');
         // Initialize Airtable service and get the axios instance
         airtableService.initializeAirtableService(airtableApiKey, airtableBaseId);
 
@@ -734,12 +734,12 @@ async function initializeApp() {
                 }
 
                 // NOTE: Ensure 'GCP_PROJECT_ID' is set in your secrets.
-                const recaptchaProjectId = await getSecret('GCP_PROJECT_ID');
+                
                 if (!recaptchaProjectId) {
                     console.error('GCP_PROJECT_ID secret is not set.');
                     return res.status(500).json({ error: 'Server configuration error.' });
                 }
-
+                
                 const projectPath = recaptchaClient.projectPath(recaptchaProjectId);
 
                 const request = {
