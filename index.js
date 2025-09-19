@@ -7,6 +7,7 @@ const http = require('http');
 const { Server } = require("socket.io");
 const { getSecret, initializeSecrets } = require('./secrets');
 const { RecaptchaEnterpriseServiceClient } = require('@google-cloud/recaptcha-enterprise');
+const googleCalendarService = require('./googleCalendarService');
 const app = express();
 const server = http.createServer(app);
 
@@ -34,6 +35,7 @@ async function initializeApp() {
     try {
         // Fetch all secrets and initialize services before starting the server
         await initializeSecrets();
+        await googleCalendarService.initializeGoogleCalendar();
 
         frontendUrl = await getSecret('FRONTEND_URL');
         const bucketName = await getSecret('GCS_BUCKET_NAME');
@@ -83,6 +85,108 @@ async function initializeApp() {
         const upload = multer({ storage: multerStorage });
 
         // ----- API ROUTES -----
+
+        // GET calendar available slots
+        app.get('/api/calendar/available-slots', async (req, res) => {
+            try {
+                // Example: /api/calendar/available-slots?start=2024-01-01T09:00:00Z&end=2024-01-05T17:00:00Z
+                const { start, end } = req.query;
+                if (!start || !end) {
+                    return res.status(400).json({ error: 'Start and end query parameters are required.' });
+                }
+                const slots = await googleCalendarService.getAvailableSlots(start, end);
+                res.json(slots);
+            } catch (error) {
+                console.error('Error in /api/calendar/available-slots:', error.message);
+                res.status(500).json({ error: 'Failed to fetch available slots.' });
+            }
+        });
+
+        // POST (create) a new calendar event
+        app.post('/api/calendar/create-event', async (req, res) => {
+            try {
+                const eventData = req.body; // Renamed for clarity
+
+                // Calculate the end time (e.g., 30 minutes after the start time)
+                const startTime = new Date(eventData.meetingDate);
+                const endTime = new Date(startTime.getTime() + 30 * 60 * 1000);
+
+                // --- Using Rich Text (HTML) in the description ---
+                const eventDescription = `
+                    <b>Free Video Consultation</b>
+                    <br><br>
+                    <b>Booked by:</b>
+                    <br><br>
+                    ${eventData.fullName}
+                    <br><br>
+                    <b>Email:</b> ${eventData.yourEmail}
+                    <br><br>
+                    <b>Phone:</b> ${eventData.phone || 'Not provided'}
+                    <br><br>
+                    <br><br>
+                    <b> State</b>
+                    <br><br>
+                    ${eventData.stateOfProgram}
+                    <br><br>
+                    <br><br>
+                    <b>Program/Service Type</b>
+                    <br><br>
+                    ${eventData.agencyServices}
+                    <br><br>
+                    <br><br>
+                    <b>Reason For this Meeting</b>
+                    <br><br>
+                    ${eventData.reasonForThisMeeting}
+                    <br><br>
+                    <br><br>
+                    <b>PLEASE READ BEFORE SCHEDULING WITH US</b>
+                    <br><br>
+                    <br><br>
+                    Thank you for your interest in speaking with us about your goal. 
+                    <br><br>
+                    <br><br>
+                    To help us serve you effectively, please ensure you complete the <a href="https://www.waivergroup.com/get-started"> Getting Started </a> form if you haven't already done so. This form is required for your appointment to proceed. Appointments without a completed form are subject to cancellation. 
+                    <br><br>
+                    <br><br>
+                    Please note that we offer one complimentary 30-minute session per individual or agency. If you have already received a free session in the past, please use our <a href="https://calendly.com/waivergroup/30min?month=2025-09"> paid consultation calendar </a> to schedule a 1-hour paid session for exploration or follow up. 
+                    <br><br>
+                    <br><br>
+                    Kindly be aware that missed or unattended complimentary sessions are considered concluded. Do not schedule a session if you are unsure of your availability. In cases of no-shows or missed appointments without prior notice, all future sessions must be scheduled through our <a href="https://calendly.com/waivergroup/30min?month=2025-09"> paid consultation calendar </a> 
+                    <br><br>
+                    <br><br>
+                    If you are a current or previous client, you may schedule a free 30-minute update session through your <a href="https://waiverprojects.web.app/client-login"> Client Portal </a> here using the email associated with your project. The appointment link can be found under the ‘Assigned Consultant’ menu tab.
+                    <br><br>
+                    <br><br>
+                    Looking forward to speaking with you!
+                `;
+
+                // Construct the final event payload for the Google Calendar API
+                const eventPayload = {
+                    "summary": `Consultation: ${eventData.fullName} // Waiver ATS`,
+                    "description": eventDescription,
+                    "start": {
+                        "dateTime": startTime.toISOString(),
+                        "timeZone": eventData.meetingTimePreference || "America/Los_Angeles" // Use client's timezone if available
+                    },
+                    "end": {
+                        "dateTime": endTime.toISOString(),
+                        "timeZone": eventData.meetingTimePreference || "America/Los_Angeles"
+                    },
+                    "attendees": [
+                        { "email": eventData.yourEmail }, // Use the email from the form data
+                        { "email": "inquiries@waivergroup.com" }
+                        // You can add your own email here as well if you want to be an attendee
+                        // { "email": "your-email@example.com" }
+                    ]
+                };
+
+                const newEvent = await googleCalendarService.createEvent(eventPayload);
+                res.status(201).json(newEvent);
+            } catch (error) {
+                console.error('Error in /api/calendar/create-event:', error.message);
+                res.status(500).json({ error: 'Failed to create calendar event.' });
+            }
+        });
 
         // GET all records from the main table
         app.get('/api/records', async (req, res) => {
