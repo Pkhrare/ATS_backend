@@ -815,7 +815,7 @@ async function initializeApp() {
                         'SCENARIOS': formData.scenario,
                         'FIRST & LAST NAME': formData.fullName,
                         'PHONE #': formData.phone,
-                        'Initial Google Meet/Zoom Timing': formattedDate,
+                        'Initial Meeting Time': formattedDate,
                         'Time Zone': formData.meetingTimePreference,
                         'Start time': formData.howSoon,
                         'consentName': formData.consentName,
