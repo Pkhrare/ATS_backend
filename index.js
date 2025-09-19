@@ -734,12 +734,12 @@ async function initializeApp() {
                 }
 
                 // NOTE: Ensure 'GCP_PROJECT_ID' is set in your secrets.
-                
+
                 if (!recaptchaProjectId) {
                     console.error('GCP_PROJECT_ID secret is not set.');
                     return res.status(500).json({ error: 'Server configuration error.' });
                 }
-                
+
                 const projectPath = recaptchaClient.projectPath(recaptchaProjectId);
 
                 const request = {
@@ -777,7 +777,46 @@ async function initializeApp() {
             } catch (error) {
                 console.error('Error in /api/check-recaptcha:', error);
                 res.status(500).json({ error: 'An unexpected error occurred during recaptcha check.' });
-            }   
+            }
+        });
+
+        // POST (create) a new intro submission
+        app.post('/api/submit-intro-form', async (req, res) => {
+            try {
+                const { formData } = req.body;
+                const formDate = new Date(`${formData.meetingDate}T${formData.meetingTimePreference}:00`)
+                console.log('Form date:', formDate);
+                const formattedDate = formDate.toISOString()
+                console.log('Formatted date:', formattedDate);
+                const recordToCreate = {
+                    fields: {
+                        'PROGRAM/SERVICE NAME': formData.programService,
+                        'Email': formData.yourEmail,
+                        'STATE': formData.stateOfProgram,
+                        'TYPE OF HELP ARE YOU LOOKING FOR': formData.typeOfHelp,
+                        'PROGRAM OR SERVICES WILL YOUR AGENCY OFFER': formData.agencyServices,
+                        'PLAN TO SERVE POPULATION': formData.populationToServe,
+                        'Agency Name (Registered Or Proposed)': formData.agencyName,
+                        'Agency Registration': formData.agencyStatus,
+                        'Information': formData.agencyPlans,
+                        'SCENARIOS': formData.scenario,
+                        'FIRST & LAST NAME': formData.fullName,
+                        'PHONE #': formData.phone,
+                        'Initial Google Meet/Zoom Timing': formattedDate,
+                        'Time Zone': formData.meetingTimePreference,
+                        'Start time': formData.howSoon,
+                        'consentName': formData.consentName,
+                    }
+                }
+                const airtableResponse = await airtableService.createRecords([recordToCreate], 'intro_submissions');
+                const createdRecord = airtableResponse.records[0];
+                console.log('Intro form submitted successfully:', createdRecord);
+                res.status(201).json(createdRecord);
+            }
+            catch (error) {
+                console.error('Error in /api/submit-intro-form:', error);
+                res.status(500).json({ error: 'An unexpected error occurred during intro form submission.' });
+            }
         });
 
 
