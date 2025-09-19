@@ -782,11 +782,24 @@ async function initializeApp() {
 
         // POST (create) a new intro submission
         app.post('/api/submit-intro-form', async (req, res) => {
+            const { formData } = req.body;
+            console.log('Form data:', formData);
             try {
-                const { formData } = req.body;
-                const formDate = new Date(`${formData.meetingDate}T${formData.meetingTimePreference}:00`)
+                const formDate = new Date(`${formData.meetingDate}`)
                 console.log('Form date:', formDate);
-                const formattedDate = formDate.toISOString()
+                const formattedDate =
+                    formDate.getFullYear() +
+                    "-" +
+                    String(formDate.getMonth() + 1).padStart(2, "0") +
+                    "-" +
+                    String(formDate.getDate()).padStart(2, "0") +
+                    "T" +
+                    String(formDate.getHours()).padStart(2, "0") +
+                    ":" +
+                    String(formDate.getMinutes()).padStart(2, "0") +
+                    ":" +
+                    String(formDate.getSeconds()).padStart(2, "0");
+                    
                 console.log('Formatted date:', formattedDate);
                 const recordToCreate = {
                     fields: {
