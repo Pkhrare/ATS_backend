@@ -799,7 +799,7 @@ async function initializeApp() {
                     String(formDate.getMinutes()).padStart(2, "0") +
                     ":" +
                     String(formDate.getSeconds()).padStart(2, "0");
-                    
+
                 console.log('Formatted date:', formattedDate);
                 const recordToCreate = {
                     fields: {
@@ -810,7 +810,7 @@ async function initializeApp() {
                         'PROGRAM OR SERVICES WILL YOUR AGENCY OFFER': formData.agencyServices,
                         'PLAN TO SERVE POPULATION': formData.populationToServe,
                         'Agency Name (Registered Or Proposed)': formData.agencyName,
-                        'Agency Registration': formData.agencyStatus,
+                        'Agency Registration': (formData.agencyStatus === 'registered') ? true : false,
                         'Information': formData.agencyPlans,
                         'SCENARIOS': formData.scenario,
                         'FIRST & LAST NAME': formData.fullName,
